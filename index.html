@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>My IPTV</title>
+  <style>
+    body { background: black; color: white; font-family: sans-serif; }
+    button:focus { outline: none; border: 2px solid red; }
+  </style>
+</head>
+<body>
+  <h1>Daftar Channel</h1>
+  <button onclick="play('https://link.stream.com/tv1.m3u8')">Channel 1</button>
+  <button onclick="play('https://link.stream.com/tv2.mpd')">Channel 2</button>
+  <video id="player" controls autoplay width="100%"></video>
+
+  <script>
+    function play(url) {
+      const video = document.getElementById('player');
+      video.src = url;
+      video.play();
+    }
+    window.onload = () => document.querySelector('button')?.focus();
+  </script>
+</body>
+</html>
