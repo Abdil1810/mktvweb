@@ -1,26 +1,137 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
-  <meta charset="utf-8">
-  <title>My IPTV</title>
+  <meta charset="UTF-8">
+  <title>M3U/M3U8 Web Player</title>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <script src="https://cdn.dashjs.org/latest/dash.all.min.js"></script>
   <style>
-    body { background: black; color: white; font-family: sans-serif; }
-    button:focus { outline: none; border: 2px solid red; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: #fff;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background: #222;
+      padding: 10px;
+      text-align: center;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    #player {
+      width: 100%;
+      height: 400px;
+      background: black;
+    }
+    #channel-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 10px;
+      padding: 10px;
+    }
+    .channel {
+      background: #1c1c1c;
+      border-radius: 8px;
+      padding: 8px;
+      text-align: center;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .channel:hover {
+      background: #333;
+    }
+    .channel img {
+      width: 100px;
+      height: 60px;
+      object-fit: contain;
+      display: block;
+      margin: auto;
+    }
+    .channel span {
+      display: block;
+      margin-top: 5px;
+      font-size: 14px;
+      color: #ccc;
+    }
   </style>
 </head>
 <body>
-  <h1>Daftar Channel</h1>
-  <button onclick="play('https://link.stream.com/tv1.m3u8')">Channel 1</button>
-  <button onclick="play('https://link.stream.com/tv2.mpd')">Channel 2</button>
-  <video id="player" controls autoplay width="100%"></video>
 
-  <script>
-    function play(url) {
-      const video = document.getElementById('player');
-      video.src = url;
-      video.play();
+<header>📺 Web TV Player</header>
+
+<video id="player" controls autoplay></video>
+
+<div id="channel-list"></div>
+
+<script>
+const M3U_URL = "https://raw.githubusercontent.com/Abdil1810/channel.m3u8/refs/heads/main/list.m3u8";
+
+const video = document.getElementById("player");
+const list = document.getElementById("channel-list");
+
+function playChannel(ch) {
+  video.src = "";
+  video.load();
+
+  if (ch.type === "hls") {
+    if (Hls.isSupported()) {
+      const hls = new Hls();
+      hls.loadSource(ch.url);
+      hls.attachMedia(video);
+    } else {
+      video.src = ch.url;
     }
-    window.onload = () => document.querySelector('button')?.focus();
-  </script>
+  } else if (ch.type === "dash") {
+    const player = dashjs.MediaPlayer().create();
+    player.initialize(video, ch.url, true);
+  }
+}
+
+function parseM3U(text) {
+  const lines = text.split("\n").map(l => l.trim()).filter(l => l);
+  const channels = [];
+  let current = {};
+
+  lines.forEach(line => {
+    if (line.startsWith("#EXTINF")) {
+      const logoMatch = line.match(/tvg-logo="(.*?)"/);
+      const nameMatch = line.split(",").pop();
+      current = {
+        name: nameMatch || "Unknown",
+        logo: logoMatch ? logoMatch[1] : "",
+        url: "",
+        type: "hls"
+      };
+    } else if (!line.startsWith("#")) {
+      current.url = line;
+      if (line.includes(".mpd")) current.type = "dash";
+      channels.push(current);
+      current = {};
+    }
+  });
+  return channels;
+}
+
+fetch(M3U_URL)
+  .then(res => res.text())
+  .then(text => {
+    const channels = parseM3U(text);
+
+    channels.forEach((ch, i) => {
+      const div = document.createElement("div");
+      div.className = "channel";
+      div.innerHTML = `<img src="${ch.logo}" alt=""><span>${ch.name}</span>`;
+      div.onclick = () => playChannel(ch);
+      list.appendChild(div);
+      if (i === 0) playChannel(ch); // play pertama otomatis
+    });
+  })
+  .catch(err => {
+    console.error("Gagal load M3U:", err);
+  });
+</script>
+
 </body>
 </html>
